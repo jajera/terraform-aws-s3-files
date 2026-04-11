@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and adjust. Variables with defaults can be omitted.
+
+# Optional — omit to use a generated name: s3files-demo-<random>
+# bucket_name = "my-example-bucket"
+
+vpc_id     = "vpc-0123456789abcdef0"
+subnet_ids = ["subnet-aaaaaaaaaaaaaaaaa", "subnet-bbbbbbbbbbbbbbbbb"]
+
+# Set false if the bucket must survive destroy with objects left in it
+# bucket_force_destroy = false
+
+# aws_region         = "ap-southeast-6"
+# log_retention_days = 7
