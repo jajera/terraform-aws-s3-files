@@ -4,18 +4,11 @@ Reusable Terraform module for provisioning [Amazon S3 Files](https://docs.aws.am
 
 See the companion CLI walkthrough at [s3-files-workloads](https://jajera.github.io/s3-files-workloads/) for step-by-step context.
 
-## Requirements
-
-| Name      | Version  |
-|------     |----------|
-| terraform | >= 1.5.0 |
-| aws       | >= 6.40  |
-
 ## Usage
 
 ```hcl
 module "s3_files" {
-  source = "github.com/jajera/terraform-aws-s3-files"
+  source = "jajera/s3-files/aws"
 
   aws_region   = "ap-southeast-2"
   vpc_id       = "vpc-0123456789abcdef0"
@@ -29,17 +22,6 @@ module "s3_files" {
   }
 }
 ```
-
-## Modules
-
-| Module | Description |
-| ------ | ----------- |
-| [s3](./modules/s3/) | S3 bucket with versioning and encryption required by S3 Files |
-| [iam](./modules/iam/) | File system role and per-compute-type client role |
-| [filesystem](./modules/filesystem/) | S3 Files file system linked to the bucket |
-| [mount-targets](./modules/mount-targets/) | One mount target per subnet |
-| [security-groups](./modules/security-groups/) | NFS port 2049 rules between compute and mount target |
-| [access-point](./modules/access-point/) | Access point required for Lambda mounts |
 
 ## Examples
 
