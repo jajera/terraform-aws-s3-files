@@ -1,0 +1,113 @@
+---
+description: Terraform coding conventions for this repo. Applies to all .tf files.
+globs:
+  - "**/*.tf"
+alwaysApply: false
+---
+
+# Terraform Conventions
+
+## Naming
+
+Pattern: `${var.name_prefix}-<resource>-<type>`
+
+All lowercase, hyphens only — no underscores in resource names. Examples:
+
+- `demo-s3files-filesystem-role`
+- `demo-s3files-mt-sg`
+- `demo-s3files-compute-sg`
+- `demo-s3files-instance-profile`
+
+Module source references always use `./modules/<name>` (relative path, no registry prefix).
+
+## for_each over count
+
+Use `for_each` when creating multiple instances of the same resource type with independent lifecycles (e.g. mount targets per subnet). Use `count` only for binary on/off toggling.
+
+```hcl
+# Good — independent lifecycle per subnet
+resource "aws_s3files_mount_target" "this" {
+  for_each = toset(var.subnet_ids)
+  subnet_id = each.value
+}
+
+# Good — binary feature flag
+resource "aws_iam_instance_profile" "compute" {
+  count = var.compute_type == "ec2" ? 1 : 0
+}
+```
+
+## Security group rules
+
+Never use inline `ingress` / `egress` blocks in `aws_security_group`. Always declare SGs without inline rules and attach rules via `aws_security_group_rule`. This avoids circular dependency errors when two SGs reference each other.
+
+```hcl
+# Good
+resource "aws_security_group" "mount_target" { ... }
+resource "aws_security_group" "compute" { ... }
+resource "aws_security_group_rule" "nfs_ingress" {
+  type                     = "ingress"
+  security_group_id        = aws_security_group.mount_target.id
+  source_security_group_id = aws_security_group.compute.id
+  ...
+}
+```
+
+## Variable types
+
+Use `optional()` in object variables to allow partial configuration. Use `nullable = false` when a variable must not be null after defaulting.
+
+```hcl
+variable "kms_key_id" {
+  type    = string
+  default = null   # null means "use SSE-S3"
+}
+```
+
+## IAM policies
+
+Use `jsonencode()` for all inline IAM policy documents — never heredoc JSON strings. Use `concat()` to conditionally include statement blocks:
+
+```hcl
+policy = jsonencode({
+  Statement = concat(
+    [{ always_included_statement }],
+    var.kms_key_arn != null ? [{ kms_statement }] : []
+  )
+})
+```
+
+## lifecycle blocks
+
+Always add `create_before_destroy = true` to security groups to allow in-place replacement.
+
+## depends_on
+
+Add explicit `depends_on` only when a dependency cannot be inferred from resource references (e.g. IAM propagation delays between modules). Document why with a comment.
+
+## terraform-docs
+
+Every `variables.tf` and `outputs.tf` variable/output must have a `description` field. Every module `README.md` must contain the terraform-docs markers:
+
+```markdown
+<!-- BEGIN_TF_DOCS -->
+<!-- END_TF_DOCS -->
+```
+
+## Outputs
+
+Re-export all key IDs and ARNs from modules in the root `outputs.tf`. Outputs that are conditionally null must document the condition in their `description`.
+
+## Provider version
+
+Root `versions.tf`:
+```hcl
+required_providers {
+  aws = {
+    source  = "hashicorp/aws"
+    version = ">= 6.40"   # minimum for aws_s3files_* native resources
+  }
+}
+```
+
+Example `versions.tf` should pin the same floor.

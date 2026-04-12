@@ -1,0 +1,84 @@
+---
+description: S3 Files-specific facts and constraints for every agent working in this Terraform repo.
+globs:
+  - "**/*.tf"
+  - "**/*.md"
+alwaysApply: false
+---
+
+# S3 Files Conventions (Terraform)
+
+## Provider version floor
+
+Always require `aws >= 6.40` — this is the minimum version that includes `aws_s3files_file_system`, `aws_s3files_mount_target`, and `aws_s3files_access_point` as native resources.
+
+## Terraform resource names
+
+| Resource | Terraform name |
+|----------|----------------|
+| File system | `aws_s3files_file_system` |
+| Mount target | `aws_s3files_mount_target` |
+| Access point | `aws_s3files_access_point` |
+
+Do **not** use `aws_efs_*` resources — those are for Amazon EFS, not S3 Files.
+
+## Two IAM roles — always needed
+
+| Role | Service principal | Purpose |
+|------|-------------------|---------|
+| File system role | `elasticfilesystem.amazonaws.com` | Syncs S3 bucket ↔ file system, manages EventBridge rules |
+| Compute role | `ec2.amazonaws.com` / `ecs-tasks.amazonaws.com` / `lambda.amazonaws.com` / `pods.eks.amazonaws.com` | Mounts the file system, reads S3 objects directly |
+
+The trust policy for the file system role **must** include `aws:SourceAccount` and `aws:SourceArn` conditions. **`aws:SourceArn` must be** `arn:aws:s3files:REGION:ACCOUNT:file-system/*` — **not** `arn:aws:elasticfilesystem:...` (the principal is still `elasticfilesystem.amazonaws.com`).
+
+EventBridge permissions for sync must allow `DO-NOT-DELETE-S3-Files*` rule prefix with `events:ManagedBy = elasticfilesystem.amazonaws.com` on put/delete/disable/enable/targets operations; read operations use `rule/*` per AWS docs.
+
+The inline policy for the file system role **must** include `s3:HeadObject` — without it the file system gets stuck in `Creating`.
+
+## Bucket prerequisites
+
+- **Versioning must be enabled.** The `modules/s3` module always enables it.
+- **Only SSE-S3 (AES256) or SSE-KMS.** SSE-C and DSSE-KMS are not supported. Do not set `sse_algorithm = "aws:kms:dsse"`.
+
+## ECS constraint
+
+`aws_ecs_task_definition` does not yet natively support `s3filesVolumeConfiguration`. Use `terraform_data` + `local-exec` with `aws ecs register-task-definition` when generating ECS task definitions with S3 Files volumes. Always add a comment explaining why.
+
+S3 Files volumes work on **Fargate** and **Managed Instances** only — not the ECS EC2 launch type.
+
+## Lambda constraint
+
+Lambda **cannot** mount a file system by ID. An access point is required. Use `modules/access-point` and reference `aws_s3files_access_point.this.arn` in `aws_lambda_function.file_system_config.arn`.
+
+## EKS driver
+
+S3 Files on EKS uses the **Amazon EFS CSI driver** (`efs.csi.aws.com`) — it is not a separate driver. The `StorageClass.provisioner` must be `efs.csi.aws.com`.
+
+## Security group rules
+
+Never use inline `ingress` / `egress` blocks in `aws_security_group` when the two SGs reference each other (mount target SG ↔ compute SG). This creates a circular dependency. Always use separate `aws_security_group_rule` resources.
+
+## NFS port
+
+Always **2049 TCP** between compute SG and mount target SG.
+
+## Default region
+
+All variable defaults and example values use `ap-southeast-2`.
+
+## CLI namespace (for local-exec and documentation)
+
+S3 Files CLI namespace is `aws s3files` — not `aws s3` or `aws efs`. Requires AWS CLI v2.34.26+.
+
+```bash
+aws s3files create-file-system ...
+aws s3files list-file-systems ...      # reads use list-* / get-*
+aws s3files create-mount-target ...
+aws s3files create-access-point ...
+```
+
+Mount type is always `-t s3files`:
+
+```bash
+sudo mount -t s3files $FS_ID:/ /mnt/s3files
+```
