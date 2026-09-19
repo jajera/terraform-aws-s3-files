@@ -12,6 +12,8 @@ alwaysApply: false
 
 Always require `aws >= 6.40` — this is the minimum version that includes `aws_s3files_file_system`, `aws_s3files_mount_target`, and `aws_s3files_access_point` as native resources.
 
+For `aws_ecs_task_definition` with `volume.s3files_volume_configuration`, require **`aws >= 6.41`** (see `examples/ecs` and `examples/ecs-ec2`). Root module stays at `>= 6.40`.
+
 ## Terraform resource names
 
 | Resource | Terraform name |
@@ -42,9 +44,9 @@ The inline policy for the file system role **must** include `s3:HeadObject` — 
 
 ## ECS constraint
 
-`aws_ecs_task_definition` does not yet natively support `s3filesVolumeConfiguration`. Use `terraform_data` + `local-exec` with `aws ecs register-task-definition` when generating ECS task definitions with S3 Files volumes. Always add a comment explaining why.
+Use native `aws_ecs_task_definition` with `volume.s3files_volume_configuration` (AWS provider **>= 6.41**). See `examples/ecs` (Fargate) and `examples/ecs-ec2`.
 
-S3 Files volumes work on **Fargate** and **Managed Instances** only — not the ECS EC2 launch type.
+S3 Files volumes work on **Fargate**, **Managed Instances**, and the **EC2 launch type** (ECS runtime support for EC2 since Sep 2026).
 
 ## Lambda constraint
 
@@ -64,9 +66,9 @@ Always **2049 TCP** between compute SG and mount target SG.
 
 ## Default region
 
-All variable defaults and example values use `ap-southeast-2`.
+Always use **`ap-southeast-6`** in variable defaults and example values.
 
-## CLI namespace (for local-exec and documentation)
+## CLI namespace (for documentation and verification)
 
 S3 Files CLI namespace is `aws s3files` — not `aws s3` or `aws efs`. Requires AWS CLI v2.34.26+.
 

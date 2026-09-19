@@ -9,6 +9,6 @@ vpc_id           = "vpc-0123456789abcdef0"
 subnet_ids       = ["subnet-aaaaaaaaaaaaaaaaa", "subnet-bbbbbbbbbbbbbbbbb"]
 ecs_cluster_name = "my-cluster"
 
-# aws_region         = "ap-southeast-2"
+# aws_region         = "ap-southeast-6"
 # container_image    = "public.ecr.aws/amazonlinux/amazonlinux:2023"
 # log_retention_days = 7

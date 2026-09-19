@@ -1,6 +1,6 @@
 # Agent Context
 
-Terraform module for **Amazon S3 Files** — provisions an NFS-compatible file system interface backed by an S3 bucket, mountable on EC2, ECS Fargate, EKS, and Lambda.
+Terraform module for **Amazon S3 Files** — provisions an NFS-compatible file system interface backed by an S3 bucket, mountable on EC2, ECS (Fargate and EC2 launch types), and Lambda.
 
 ## What this repo is
 
@@ -9,11 +9,12 @@ Terraform module for **Amazon S3 Files** — provisions an NFS-compatible file s
 ## Provider requirements
 
 - **AWS provider:** `>= 6.40` — minimum version that includes native `aws_s3files_*` resources
+- **AWS provider (ECS task volumes):** `>= 6.41` — required for `volume.s3files_volume_configuration` (`examples/ecs`, `examples/ecs-ec2`)
 - **Terraform:** `>= 1.5.0`
 
 ## Default region
 
-Always use `ap-southeast-2` in all examples and default variable values. The user has existing ECS and EKS clusters in this region.
+Always use **`ap-southeast-6`** in examples, docs, and the root module `aws_region` default. Fargate examples need an existing cluster in that region (or set `aws_region` to match the cluster).
 
 ## Module structure
 
@@ -27,10 +28,10 @@ modules/
   access-point/    aws_s3files_access_point (required for Lambda)
 
 examples/
-  ec2/     EC2 instance with amazon-efs-utils mount
-  ecs/     ECS Fargate on existing cluster (terraform_data + local-exec for task def)
-  eks/     EKS PV/PVC via EFS CSI driver on existing cluster
-  lambda/  Lambda with access point
+  ec2/       EC2 instance with amazon-efs-utils mount
+  ecs/       ECS Fargate on existing cluster (native s3files_volume_configuration; aws >= 6.41)
+  ecs-ec2/   ECS EC2 launch type: new cluster + one ECS-optimized instance (native s3files_volume_configuration; aws >= 6.41; agent >= 1.104)
+  lambda/    Lambda with access point
 ```
 
 ## Key S3 Files facts
@@ -66,12 +67,15 @@ EventBridge inline policy must target rules named `DO-NOT-DELETE-S3-Files*` with
 | -------- |-----------                                                             |
 | EC2      | Requires `amazon-efs-utils` v3.0.0+; mount type `-t s3files`           |
 | EKS      | Uses Amazon EFS CSI driver (`aws-efs-csi-driver`) — same driver as EFS |
-| ECS      | **Fargate and Managed Instances only** — EC2 launch type not supported |
+| ECS      | Fargate, Managed Instances, and **EC2 launch type** (since Sep 2026) |
 | Lambda   | **Access point required** — cannot mount by file system ID alone       |
 
-### ECS task definition limitation
+### ECS task definition (`s3files_volume_configuration`)
 
-`aws_ecs_task_definition` does not yet support `s3filesVolumeConfiguration`. The `examples/ecs` example uses `terraform_data` + `local-exec` to call `aws ecs register-task-definition` directly. Requires AWS CLI v2.34.26+ on the machine running `terraform apply`.
+Native on `aws_ecs_task_definition` since AWS provider **>= 6.41** (`volume.s3files_volume_configuration`).
+
+- [`examples/ecs`](./examples/ecs/) (Fargate) — native resource (`required_providers` aws `>= 6.41`)
+- [`examples/ecs-ec2`](./examples/ecs-ec2/) — native resource (`required_providers` aws `>= 6.41`)
 
 ### Security group port
 

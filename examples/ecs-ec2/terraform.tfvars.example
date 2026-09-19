@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars and adjust.
+
+# bucket_name = "my-example-bucket"
+
+# Set false if the bucket must survive destroy with objects left in it
+# bucket_force_destroy = false
+
+vpc_id     = "vpc-0123456789abcdef0"
+subnet_ids = ["subnet-aaaaaaaaaaaaaaaaa", "subnet-bbbbbbbbbbbbbbbbb"]
+
+# aws_region          = "ap-southeast-6"
+# instance_subnet_id  = "subnet-aaaaaaaaaaaaaaaaa"
+# instance_type       = "t3.small"
+# container_image     = "public.ecr.aws/amazonlinux/amazonlinux:2023"
+# log_retention_days  = 7
