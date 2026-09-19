@@ -1,6 +1,6 @@
 # terraform-aws-s3-files
 
-Reusable Terraform module for provisioning [Amazon S3 Files](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files.html) — an NFS-compatible file system interface backed by an S3 bucket, mountable on EC2, ECS Fargate, EKS, and Lambda.
+Reusable Terraform module for provisioning [Amazon S3 Files](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-files.html) — an NFS-compatible file system interface backed by an S3 bucket, mountable on EC2, ECS (Fargate and EC2 launch types), and Lambda.
 
 See the companion CLI walkthrough at [s3-files-workloads](https://jajera.github.io/s3-files-workloads/) for step-by-step context.
 
@@ -10,7 +10,7 @@ See the companion CLI walkthrough at [s3-files-workloads](https://jajera.github.
 module "s3_files" {
   source = "jajera/s3-files/aws"
 
-  aws_region   = "ap-southeast-2"
+  aws_region   = "ap-southeast-6"
   vpc_id       = "vpc-0123456789abcdef0"
   subnet_ids   = ["subnet-aaa", "subnet-bbb"]
   bucket_name  = "my-s3-files-bucket"
@@ -28,8 +28,8 @@ module "s3_files" {
 | Example | Description |
 | ------- | ----------- |
 | [ec2](./examples/ec2/) | EC2 instance with S3 Files mounted via amazon-efs-utils |
-| [ecs](./examples/ecs/) | ECS Fargate task with S3 Files volume using existing cluster |
-| [eks](./examples/eks/) | EKS persistent volume via EFS CSI driver using existing cluster |
+| [ecs](./examples/ecs/) | ECS Fargate task with native `s3files_volume_configuration` on an existing cluster |
+| [ecs-ec2](./examples/ecs-ec2/) | ECS EC2 launch type: cluster + instance + native `s3files_volume_configuration` |
 | [lambda](./examples/lambda/) | Lambda function with access point mount |
 
 <!-- BEGIN_TF_DOCS -->
@@ -68,7 +68,7 @@ module "s3_files" {
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_access_point_name"></a> [access\_point\_name](#input\_access\_point\_name) | Logical label for the access point (used for the Name tag when create\_access\_point = true; the AWS-assigned access point name is returned in outputs) | `string` | `"default"` | no |
-| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region for all resources | `string` | `"ap-southeast-2"` | no |
+| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region for all resources | `string` | `"ap-southeast-6"` | no |
 | <a name="input_bucket_name"></a> [bucket\_name](#input\_bucket\_name) | Name of the S3 bucket to back the file system. Must be globally unique. S3 Files requires versioning — it will be enabled automatically. | `string` | n/a | yes |
 | <a name="input_compute_type"></a> [compute\_type](#input\_compute\_type) | Compute platform that will mount the file system. Selects the IAM trust principal for the compute role. | `string` | `"ec2"` | no |
 | <a name="input_create_access_point"></a> [create\_access\_point](#input\_create\_access\_point) | If true, create an S3 Files access point. Required for Lambda mounts. | `bool` | `false` | no |
